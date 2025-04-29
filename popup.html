@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --primary-color: #4a6cf7;
+      --primary-hover: #3a5ce5;
+      --success-color: #10b981;
+      --warning-color: #f59e0b;
+      --danger-color: #ef4444;
+      --text-color: #333;
+      --text-light: #6b7280;
+      --bg-color: #ffffff;
+      --bg-light: #f9fafb;
+      --border-color: #e5e7eb;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --radius: 8px;
+      --transition: all 0.2s ease;
+    }
+
+    [data-disabled="true"] {
+      filter: grayscale(1);
+      opacity: 0.7;
+    }
+
+    .disabled {
+      opacity: 0.7;
+      background-color: var(--bg-light) !important;
+      border-color: var(--border-color) !important;
+    }
+
+    button.disabled {
+      background-color: var(--border-color) !important;
+      color: var(--text-light) !important;
+    }
+
+    select.disabled {
+      background-image: url('data:image/svg+xml;charset=US-ASCII,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z" fill="%23999"/></svg>') !important;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 400px;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: var(--text-color);
+      background-color: var(--bg-color);
+      line-height: 1.5;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+      color: var(--primary-color);
+    }
+
+    .section {
+      margin-bottom: 24px;
+      background: var(--bg-light);
+      padding: 16px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    h2 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      color: var(--text-color);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h2::before {
+      content: '';
+      display: block;
+      width: 4px;
+      height: 16px;
+      background-color: var(--primary-color);
+      border-radius: 2px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--text-color);
+    }
+
+    input[type="number"] {
+      width: 80px;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      font-size: 14px;
+      transition: var(--transition);
+    }
+
+    input[type="number"]:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+    }
+
+    .select-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      font-size: 14px;
+      background-color: var(--bg-color);
+      transition: var(--transition);
+      appearance: none;
+      background-image: url('data:image/svg+xml;charset=US-ASCII,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 10L12 15L17 10" stroke="%236b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      background-size: 24px;
+      padding-right: 40px;
+    }
+
+    .select-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+    }
+
+    .help-text {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--text-light);
+      line-height: 1.4;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toggle-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+
+    .toggle-switch input {
+      display: none;
+    }
+
+    .toggle-slider {
+      position: relative;
+      width: 48px;
+      height: 24px;
+      background: var(--border-color);
+      border-radius: 12px;
+      transition: var(--transition);
+    }
+
+    .toggle-slider::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: white;
+      top: 2px;
+      left: 2px;
+      transition: var(--transition);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background: var(--primary-color);
+    }
+
+    .toggle-switch input:checked + .toggle-slider::after {
+      transform: translateX(24px);
+    }
+
+    .toggle-switch .toggle-label {
+      font-size: 14px;
+      font-weight: 500;
+      user-select: none;
+    }
+
+    .toggle-switch:hover .toggle-slider::after {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    .pattern-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .preset-pattern {
+      background: var(--bg-light);
+      border-radius: var(--radius);
+      padding: 8px;
+      border: 1px dashed var(--border-color);
+    }
+
+    .preset-pattern .pattern-input,
+    .preset-pattern .pattern-action {
+      background: transparent;
+      border-color: var(--border-color);
+    }
+
+    .preset-pattern .remove-pattern.preset::before {
+      content: 'Preset';
+      position: absolute;
+      font-size: 10px;
+      background: var(--text-light);
+      color: white;
+      padding: 2px 6px;
+      border-radius: 10px;
+      top: -12px;
+      right: 20px;
+      opacity: 0;
+      transition: var(--transition);
+      pointer-events: none;
+    }
+
+    .preset-pattern:hover .remove-pattern.preset::before {
+      opacity: 1;
+      transform: translateY(-4px);
+    }
+
+    .pattern-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .pattern-list::-webkit-scrollbar-track {
+      background: var(--bg-light);
+      border-radius: 3px;
+    }
+
+    .pattern-list::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    .pattern-entry {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .pattern-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      font-size: 14px;
+      transition: var(--transition);
+    }
+
+    .pattern-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+    }
+
+    .pattern-action {
+      width: 120px;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      font-size: 14px;
+      background-color: var(--bg-color);
+      transition: var(--transition);
+    }
+
+    .pattern-action:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+
+    .remove-pattern {
+      background: var(--danger-color);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .remove-pattern:hover {
+      background: #dc2626;
+    }
+
+    button {
+      padding: 10px 16px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-weight: 500;
+      transition: var(--transition);
+      font-size: 14px;
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    #status {
+      margin-top: 12px;
+      padding: 10px;
+      background: #e8f5e9;
+      color: var(--success-color);
+      border-radius: var(--radius);
+      display: none;
+      font-size: 14px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .history-section {
+      margin-top: 24px;
+    }
+
+    .history-item {
+      padding: 12px;
+      border-bottom: 1px solid var(--border-color);
+      transition: var(--transition);
+    }
+
+    .history-item:hover {
+      background-color: rgba(74, 108, 247, 0.05);
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    .history-url {
+      font-size: 14px;
+      word-break: break-all;
+      color: var(--text-color);
+    }
+
+    .history-time {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-top: 4px;
+    }
+
+    .empty-state {
+      padding: 20px;
+      text-align: center;
+      color: var(--text-light);
+      font-size: 14px;
+    }
+    
+    .fade-out {
+      opacity: 0 !important;
+      transform: translateY(10px) !important;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Auto Tab Kill</h1>
+  </div>
+
+  <div class="section settings">
+    <h2>General Settings</h2>
+    <div class="form-group">
+      <label class="toggle-switch">
+        <input type="checkbox" id="enabled" checked>
+        <span class="toggle-slider"></span>
+        <span class="toggle-label">Enable Auto Tab Kill</span>
+      </label>
+      <div id="disabled-message" class="help-text" style="display: none; margin-left: 60px;">
+        Extension is disabled but you can still modify settings
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="timeLimit">Close tabs after inactivity (minutes):</label>
+      <input type="number" id="timeLimit" min="1" max="1440" value="2" required>
+    </div>
+    <div class="form-group">
+      <label>Notification Settings:</label>
+      <div class="checkbox-group">
+        <label>
+          <input type="checkbox" id="showNotifications" checked> Show notifications when tabs are closed
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Default Closing Behavior</h2>
+    <div class="form-group">
+      <label for="defaultBehavior">When should inactive tabs be closed?</label>
+      <select id="defaultBehavior" class="select-input">
+        <option value="duplicate-no-query">Only if they are duplicates (ignore query parameters)</option>
+        <option value="duplicate">Only if they are exact duplicates</option>
+        <option value="duplicate-domain">If they have the same domain (keep newest)</option>
+        <option value="always">Always close after inactivity</option>
+        <option value="never">Never close automatically</option>
+      </select>
+      <div class="help-text">This is the default behavior. URL patterns below can override this for specific sites.</div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>URL Patterns</h2>
+    <div id="patternList" class="pattern-list"></div>
+    <button id="addPattern" class="btn btn-primary">Add Pattern</button>
+    <div id="status" class="status">Saved</div>
+  </div>
+  
+  <div class="section history-section">
+    <h2>Recently Closed Tabs</h2>
+    <div id="history" class="history">
+      <div class="empty-state">No tabs have been closed yet</div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

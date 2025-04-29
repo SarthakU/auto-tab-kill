@@ -1,0 +1,36 @@
+{
+  "manifest_version": 2,
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "auto-tab-kill@example.com"
+    }
+  },
+  "name": "Auto Tab Killer",
+  "version": "1.0",
+  "description": "Automatically closes inactive tabs after a configured time limit",
+  "permissions": [
+    "tabs",
+    "storage",
+    "alarms",
+    "notifications"
+  ],
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_title": "Auto Tab Killer"
+  },
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "options_ui": {
+    "page": "options.html",
+    "browser_style": true
+  },
+  "web_accessible_resources": [
+    "icons/*.png",
+    "config.json"
+  ],
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "defaults": {
+    "enabled": true,
+    "timeLimit": 2,
+    "defaultBehavior": "duplicate-no-query",
+    "showNotifications": true,
+    "patterns": [
+      {
+        "pattern": "about:*",
+        "action": "keep",
+        "isPreset": true
+      }
+    ]
+  }
+}
