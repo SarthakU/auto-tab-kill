@@ -29,15 +29,17 @@ async function getTabLastAccess(tabId) {
 /**
  * Adds a closed tab to the history and shows a notification
  * @param {string} url - The URL of the closed tab
+ * @param {string} type - The type of the tab (default: 'closed')
  */
-async function addToHistory(url) {
+async function addToHistory(url, type = 'closed') {
   try {
     const { closedTabs = [] } = await browser.storage.local.get({ closedTabs: [] });
     const { showNotifications = true } = await browser.storage.sync.get({ showNotifications: true });
     
     closedTabs.push({
       url,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      type
     });
     
     // Keep only last 100 entries
@@ -52,8 +54,8 @@ async function addToHistory(url) {
       await browser.notifications.create({
         type: 'basic',
         iconUrl: browser.runtime.getURL('icons/icon-48.png'),
-        title: 'Tab Closed',
-        message: `Closed inactive tab: ${url}`
+        title: type === 'unloaded' ? 'Tab Unloaded' : 'Tab Closed',
+        message: `${type === 'unloaded' ? 'Unloaded' : 'Closed'} tab: ${url}`
       });
     }
   } catch (e) {
@@ -291,7 +293,96 @@ function getUrlWithoutQuery(url) {
   }
 }
 
+// Track unloaded tabs and their timestamps
+let unloadedTabs = new Map();
 
+// Function to check and kill old unloaded tabs
+async function checkAndKillUnloadedTabs() {
+  console.log('Checking for old unloaded tabs...');
+  const settings = await browser.storage.local.get(['autoKillUnloaded']);
+  
+  if (!settings.autoKillUnloaded) {
+    console.log('Auto-kill unloaded tabs is disabled');
+    return;
+  }
+
+  const now = Date.now();
+  const KILL_AFTER_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+  for (const [tabId, unloadTime] of unloadedTabs.entries()) {
+    if (now - unloadTime >= KILL_AFTER_MS) {
+      try {
+        const tab = await browser.tabs.get(tabId);
+        if (tab && !tab.active && !tab.discarded) {
+          console.log(`Killing old unloaded tab: ${tab.url}`);
+          await browser.tabs.remove(tabId);
+          await addToHistory(tab.url, 'killed');
+        }
+      } catch (error) {
+        console.error(`Error killing tab ${tabId}:`, error);
+      }
+      unloadedTabs.delete(tabId);
+    }
+  }
+}
+
+// Update the checkUnloadTabs function to track unloaded tabs
+async function checkUnloadTabs() {
+  console.log('Starting unload tabs check...');
+  const settings = await browser.storage.local.get(['enabled', 'unloadTimeout']);
+  
+  if (!settings.enabled) {
+    console.log('Extension is disabled, skipping unload check');
+    return;
+  }
+
+  const now = Date.now();
+  const lastUnloadTime = await browser.storage.local.get('lastUnloadTime');
+  const unloadInterval = (settings.unloadTimeout || 30) * 60 * 1000; // Convert minutes to milliseconds
+
+  if (lastUnloadTime && now - lastUnloadTime < unloadInterval) {
+    console.log(`Unload interval not yet passed. Time left: ${Math.round((unloadInterval - (now - lastUnloadTime)) / 60000)} minutes`);
+    return;
+  }
+
+  const tabs = await browser.tabs.query({});
+  for (const tab of tabs) {
+    if (!tab.active && !tab.discarded) {
+      try {
+        await browser.tabs.discard(tab.id);
+        unloadedTabs.set(tab.id, now); // Track when the tab was unloaded
+        await addToHistory(tab.url, 'unloaded');
+      } catch (error) {
+        console.error(`Error unloading tab ${tab.id}:`, error);
+      }
+    }
+  }
+
+  await browser.storage.local.set({ lastUnloadTime: now });
+}
+
+// Add alarm for checking unloaded tabs
+browser.alarms.create('checkUnloadedTabs', {
+  periodInMinutes: 30 // Check every 30 minutes
+});
+
+// Update the alarm handler
+browser.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === 'checkUnloadTabs') {
+    await checkAndKillUnloadedTabs();
+  }
+});
+
+// Update the tab update listener to remove tabs from tracking when they become active
+browser.tabs.onActivated.addListener(async (activeInfo) => {
+  unloadedTabs.delete(activeInfo.tabId);
+});
+
+browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.active) {
+    unloadedTabs.delete(tabId);
+  }
+});
 
 // Listen for tab activation
 browser.tabs.onActivated.addListener(activeInfo => {
@@ -437,7 +528,113 @@ browser.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
+// Set up periodic check for unloading tabs
+browser.alarms.create('checkUnloadTabs', {
+  periodInMinutes: 1
+});
+
+// Track last unload time
+let lastUnloadTime = 0;
+
+// Unload (discard) all eligible tabs if unloadTimeout has passed
+async function checkUnloadTabs() {
+  try {
+    console.log('Starting unload tabs check...');
+    const settings = await browser.storage.sync.get({
+      unloadTimeout: 30,
+      enabled: true
+    });
+    if (!settings.enabled) {
+      console.log('Extension is disabled, skipping unload check');
+      return;
+    }
+    const now = Date.now();
+    if (!lastUnloadTime) lastUnloadTime = now;
+    const unloadInterval = (settings.unloadTimeout || 30) * 60 * 1000;
+    if (now - lastUnloadTime < unloadInterval) {
+      console.log(`Unload interval not yet passed. Time left: ${Math.round((unloadInterval - (now - lastUnloadTime)) / 60000)} minutes`);
+      return;
+    }
+    const tabs = await browser.tabs.query({});
+    for (const tab of tabs) {
+      if (tab.pinned || tab.active || tab.discarded) continue;
+      // Only unload normal tabs
+      try {
+        await browser.tabs.discard(tab.id);
+        console.log(`Unloaded tab ${tab.id}: ${tab.url}`);
+        // Add unloaded tab to logs
+        await addToHistory(tab.url, 'unloaded');
+      } catch (e) {
+        console.error('Error unloading tab:', tab.id, e);
+      }
+    }
+    lastUnloadTime = now;
+  } catch (e) {
+    console.error('Error in checkUnloadTabs:', e);
+  }
+}
+
+// Listen for alarms
+browser.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'checkInactiveTabs') {
+    console.log("Checking inactive tabs...");
+    checkInactiveTabs().catch(error => {
+      console.error('Error checking inactive tabs:', error);
+    });
+  } else if (alarm.name === 'checkUnloadTabs') {
+    checkUnloadTabs().catch(error => {
+      console.error('Error checking unload tabs:', error);
+    });
+  }
+});
+
 // Initialize extension
 initializeTabActivity().catch(error => {
   console.error('Error initializing tab activity:', error);
+});
+
+// Function to manually unload inactive tabs
+async function manuallyUnloadInactiveTabs() {
+  try {
+    console.log('Manually unloading inactive tabs...');
+    const settings = await browser.storage.sync.get({
+      timeLimit: 2,
+      enabled: true
+    });
+
+    if (!settings.enabled) {
+      console.log('Extension is disabled, skipping manual unload');
+      return;
+    }
+
+    const tabs = await browser.tabs.query({});
+    const now = Date.now();
+    const inactiveTime = settings.timeLimit * 60 * 1000;
+
+    for (const tab of tabs) {
+      if (tab.pinned || tab.active || tab.discarded) continue;
+      
+      const lastAccess = await getTabLastAccess(tab.id);
+      const timeSinceLastAccess = now - lastAccess;
+      
+      if (timeSinceLastAccess >= inactiveTime) {
+        try {
+          await browser.tabs.discard(tab.id);
+          console.log(`Manually unloaded tab ${tab.id}: ${tab.url}`);
+          await addToHistory(tab.url, 'unloaded');
+        } catch (e) {
+          console.error('Error unloading tab:', tab.id, e);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error in manual unload:', e);
+  }
+}
+
+// Listen for messages from popup
+browser.runtime.onMessage.addListener((message) => {
+  if (message.action === 'unloadInactiveTabs') {
+    manuallyUnloadInactiveTabs();
+  }
 });

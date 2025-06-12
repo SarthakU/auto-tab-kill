@@ -3,11 +3,13 @@ function saveOptions(e) {
   e.preventDefault();
   console.log('Saving options...');
   const timeLimit = document.getElementById('timeLimit').value;
+  const unloadTimeout = document.getElementById('unloadTimeout').value;
   const whitelist = document.getElementById('whitelist').value.split('\n').filter(pattern => pattern.trim() !== '');
-  console.log('New settings:', { timeLimit, whitelist });
+  console.log('New settings:', { timeLimit, unloadTimeout, whitelist });
   browser.storage.sync.set({
-    timeLimit: document.getElementById('timeLimit').value,
-    whitelist: document.getElementById('whitelist').value.split('\n').filter(pattern => pattern.trim() !== '')
+    timeLimit: timeLimit,
+    unloadTimeout: unloadTimeout,
+    whitelist: whitelist
   }).then(() => {
     const status = document.getElementById('status');
     status.textContent = 'Settings saved successfully!';
@@ -24,10 +26,12 @@ function restoreOptions() {
   console.log('Loading saved options...');
   browser.storage.sync.get({
     timeLimit: 1,
+    unloadTimeout: 30,
     whitelist: []
   }).then((result) => {
     console.log('Loaded settings:', result);
     document.getElementById('timeLimit').value = result.timeLimit;
+    document.getElementById('unloadTimeout').value = result.unloadTimeout;
     document.getElementById('whitelist').value = result.whitelist.join('\n');
   }).catch(error => {
     console.error('Error loading settings:', error);
