@@ -2,6 +2,7 @@
  * @typedef {Object} ExtensionSettings
  * @property {boolean} enabled - Whether the extension is enabled
  * @property {number} timeLimit - Inactivity time limit in minutes
+ * @property {number} unloadTimeout - Inactivity time limit in minutes
  * @property {string} defaultBehavior - Default behavior for inactive tabs
  * @property {boolean} showNotifications - Whether to show notifications
  * @property {Pattern[]} patterns - URL patterns and their actions
@@ -77,58 +78,51 @@ function addPatternEntry(pattern) {
  * Loads and displays recently closed tabs
  */
 async function loadHistory() {
-  try {
-    const { closedTabs = [] } = await browser.storage.local.get({ closedTabs: [] });
-    const historyContainer = document.getElementById('history');
-
-    if (closedTabs.length === 0) {
-      historyContainer.innerHTML = '<div class="empty-state">No tabs have been closed yet</div>';
-      return;
-    }
-
-    const recentTabs = closedTabs.slice(-10).reverse();
-    historyContainer.innerHTML = '';
-
-    recentTabs.forEach(tab => {
-      const tabEntry = document.createElement('div');
-      tabEntry.className = 'history-entry';
-      const timeDiff = Math.round((Date.now() - tab.timestamp) / 60000);
-      
-      const title = document.createElement('div');
-      title.className = 'history-title';
-      title.textContent = tab.title || 'Untitled';
-      
-      const url = document.createElement('div');
-      url.className = 'history-url';
-      url.textContent = tab.url;
-      
-      const time = document.createElement('div');
-      time.className = 'history-time';
-      time.textContent = `${timeDiff} minutes ago`;
-      
-      const reopenButton = document.createElement('button');
-      reopenButton.className = 'btn btn-small';
-      reopenButton.textContent = 'Reopen';
-      reopenButton.addEventListener('click', async () => {
-        try {
-          await browser.tabs.create({ url: tab.url });
-        } catch (error) {
-          console.error('Error reopening tab:', error);
-        }
-      });
-      
-      tabEntry.appendChild(title);
-      tabEntry.appendChild(url);
-      tabEntry.appendChild(time);
-      tabEntry.appendChild(reopenButton);
-      
-      historyContainer.appendChild(tabEntry);
-    });
-  } catch (error) {
-    console.error('Error loading history:', error);
-    const historyContainer = document.getElementById('history');
-    historyContainer.innerHTML = '<div class="empty-state">Error loading history</div>';
+  const { closedTabs = [] } = await browser.storage.local.get({ closedTabs: [] });
+  const historyContainer = document.getElementById('history');
+  historyContainer.innerHTML = '';
+  
+  const recentTabs = closedTabs.slice(-10).reverse();
+  
+  if (recentTabs.length === 0) {
+    const emptyState = document.createElement('div');
+    emptyState.className = 'empty-state';
+    emptyState.textContent = 'No tabs have been closed yet.';
+    historyContainer.appendChild(emptyState);
+    return;
   }
+  
+  recentTabs.forEach((tab, index) => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    
+    const url = document.createElement('div');
+    url.className = 'history-url';
+    url.textContent = tab.url;
+    url.title = tab.url; // Add tooltip for long URLs
+    
+    const time = document.createElement('div');
+    time.className = 'history-time';
+    time.textContent = new Date(tab.timestamp).toLocaleString();
+    
+    const type = document.createElement('div');
+    type.className = 'history-type';
+    type.textContent = tab.type === 'unloaded' ? 'Unloaded' : 'Closed';
+    
+    item.appendChild(url);
+    item.appendChild(time);
+    item.appendChild(type);
+    historyContainer.appendChild(item);
+    
+    // Add staggered animation
+    item.style.opacity = '0';
+    item.style.transform = 'translateY(10px)';
+    setTimeout(() => {
+      item.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      item.style.opacity = '1';
+      item.style.transform = 'translateY(0)';
+    }, 50 * index);
+  });
 }
 
 /**
@@ -139,8 +133,10 @@ async function saveSettings() {
     const settings = {
       enabled: document.getElementById('enabled').checked,
       timeLimit: parseInt(document.getElementById('timeLimit').value, 10) || 2,
+      unloadTimeout: parseInt(document.getElementById('unloadTimeout').value, 10) || 30,
       defaultBehavior: document.getElementById('defaultBehavior').value,
       showNotifications: document.getElementById('showNotifications').checked,
+      autoKillUnloaded: document.getElementById('autoKillUnloaded').checked,
       patterns: getPatterns()
     };
 
@@ -165,31 +161,25 @@ async function saveSettings() {
 // Initialize UI when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    const settings = await browser.storage.sync.get({
-      enabled: true,
-      timeLimit: 2,
-      defaultBehavior: 'duplicate-no-query',
-      showNotifications: true,
-      patterns: [
-        {
-          pattern: 'about:*',
-          action: 'keep',
-          isPreset: true
-        }
-      ]
-    });
+    const settings = await browser.storage.local.get(['enabled', 'timeLimit', 'unloadTimeout', 'defaultBehavior', 'autoKillUnloaded']);
+    document.getElementById('enabled').checked = settings.enabled ?? true;
+    document.getElementById('timeLimit').value = settings.timeLimit ?? 2;
+    document.getElementById('unloadTimeout').value = settings.unloadTimeout ?? 30;
+    document.getElementById('defaultBehavior').value = settings.defaultBehavior ?? 'duplicate-no-query';
+    document.getElementById('autoKillUnloaded').checked = settings.autoKillUnloaded ?? true;
+    document.getElementById('showNotifications').checked = settings.showNotifications ?? true;
 
-    // Set initial values
-    document.getElementById('enabled').checked = settings.enabled;
-    document.getElementById('timeLimit').value = settings.timeLimit || 2;
-    document.getElementById('defaultBehavior').value = settings.defaultBehavior;
-    document.getElementById('showNotifications').checked = settings.showNotifications;
-
-    // Add input validation for timeLimit
+    // Add input validation for timeLimit and unloadTimeout
     document.getElementById('timeLimit').addEventListener('change', (e) => {
       const value = parseInt(e.target.value, 10);
       if (isNaN(value) || value < 1) {
         e.target.value = 2;
+      }
+    });
+    document.getElementById('unloadTimeout').addEventListener('change', (e) => {
+      const value = parseInt(e.target.value, 10);
+      if (isNaN(value) || value < 1) {
+        e.target.value = 30;
       }
     });
 
@@ -217,7 +207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       saveSettings();
     });
 
-    ['timeLimit', 'defaultBehavior', 'showNotifications'].forEach(id => {
+    ['timeLimit', 'unloadTimeout', 'defaultBehavior', 'showNotifications', 'autoKillUnloaded'].forEach(id => {
       const element = document.getElementById(id);
       element.addEventListener('change', saveSettings);
       if (id === 'timeLimit') {
@@ -234,9 +224,34 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
 
+    // Add unloadTimeout listeners
+    const unloadTimeoutElement = document.getElementById('unloadTimeout');
+    unloadTimeoutElement.addEventListener('change', saveSettings);
+    unloadTimeoutElement.addEventListener('input', saveSettings);
+
     // Initial UI update
     updateEnabledState();
     loadHistory();
+
+    // Load settings
+    const localSettings = await browser.storage.local.get(['enabled', 'timeLimit', 'unloadTimeout', 'defaultBehavior', 'autoKillUnloaded']);
+    document.getElementById('enabled').checked = localSettings.enabled ?? true;
+    document.getElementById('timeLimit').value = localSettings.timeLimit ?? 2;
+    document.getElementById('unloadTimeout').value = localSettings.unloadTimeout ?? 30;
+    document.getElementById('defaultBehavior').value = localSettings.defaultBehavior ?? 'duplicate-no-query';
+    document.getElementById('autoKillUnloaded').checked = localSettings.autoKillUnloaded ?? true;
+
+    // Load history
+    loadHistory();
+
+    // Add event listeners
+    document.getElementById('enabled').addEventListener('change', saveSettings);
+    document.getElementById('timeLimit').addEventListener('change', saveSettings);
+    document.getElementById('unloadTimeout').addEventListener('change', saveSettings);
+    document.getElementById('defaultBehavior').addEventListener('change', saveSettings);
+    document.getElementById('autoKillUnloaded').addEventListener('change', saveSettings);
+    document.getElementById('saveSettings').addEventListener('click', saveSettings);
+    document.getElementById('unloadInactive').addEventListener('click', unloadInactiveTabs);
   } catch (error) {
     console.error('Error initializing popup:', error);
   }
@@ -349,8 +364,13 @@ async function loadHistory() {
     time.className = 'history-time';
     time.textContent = new Date(tab.timestamp).toLocaleString();
     
+    const type = document.createElement('div');
+    type.className = 'history-type';
+    type.textContent = tab.type === 'unloaded' ? 'Unloaded' : 'Closed';
+    
     item.appendChild(url);
     item.appendChild(time);
+    item.appendChild(type);
     historyContainer.appendChild(item);
     
     // Add staggered animation
@@ -439,3 +459,27 @@ function addPatternEntry(pattern = { pattern: '', action: 'keep', isPreset: fals
 // Add event listeners
 document.getElementById('save').addEventListener('click', saveSettings);
 document.getElementById('addPattern').addEventListener('click', () => addPatternEntry());
+
+async function unloadInactiveTabs() {
+  try {
+    const button = document.getElementById('unloadInactive');
+    button.disabled = true;
+    button.textContent = 'Unloading...';
+    
+    await browser.runtime.sendMessage({ action: 'unloadInactiveTabs' });
+    
+    button.textContent = 'Unloaded!';
+    setTimeout(() => {
+      button.textContent = 'Unload Inactive Tabs';
+      button.disabled = false;
+    }, 2000);
+  } catch (error) {
+    console.error('Error unloading tabs:', error);
+    const button = document.getElementById('unloadInactive');
+    button.textContent = 'Error!';
+    button.disabled = false;
+    setTimeout(() => {
+      button.textContent = 'Unload Inactive Tabs';
+    }, 2000);
+  }
+}
