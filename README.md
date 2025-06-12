@@ -1,36 +1,84 @@
-# Automatic Tab Killer
+# Auto Tab Kill
 
-A Firefox extension that automatically closes inactive tabs based on a configurable time limit.
+A Firefox extension that automatically manages your tabs to improve browser performance and memory usage.
 
 ## Features
 
-- Automatically closes tabs that have been inactive for a specified duration
-- Configurable time limit (in minutes)
-- Whitelist support using pattern matching
-- Simple and intuitive options page
+- **Automatic Tab Management**
+  - Closes inactive tabs based on customizable time limits
+  - Unloads tabs to free up memory while keeping them in the tab bar
+  - Auto-kills unloaded tabs after 24 hours to prevent memory bloat
+  - Manual unload button to immediately unload inactive tabs
 
-## Installation
+- **Smart Tab Handling**
+  - Multiple behavior modes for different use cases:
+    - Only close duplicate tabs (ignoring query parameters)
+    - Only close exact duplicate tabs
+    - Close tabs from the same domain (keeping the newest)
+    - Always close after inactivity
+    - Never close automatically
 
-1. Open Firefox and go to `about:debugging`
-2. Click "This Firefox" in the left sidebar
-3. Click "Load Temporary Add-on"
-4. Navigate to the extension directory and select any file (e.g., manifest.json)
+- **Customizable Settings**
+  - Enable/disable the extension
+  - Set custom inactivity time limits
+  - Configure unload interval (default: 30 minutes)
+  - Toggle auto-kill for unloaded tabs
+  - Choose default behavior mode
+  - Enable/disable notifications
 
-## Configuration
+- **URL Pattern Management**
+  - Define custom rules for specific URLs
+  - Support for wildcards and regular expressions
+  - Built-in presets for common cases
+  - Easy-to-use pattern editor
 
-1. Click the extension icon in the toolbar
-2. Set the desired time limit in minutes
-3. Add whitelist patterns (one per line)
-   - Use `*` as a wildcard
-   - Examples:
-     - `*.google.com` (matches all Google domains)
-     - `*mail.com` (matches any URL ending with mail.com)
-     - `docs.*.com` (matches docs.example.com, etc.)
-4. Click "Save Settings"
+- **History Tracking**
+  - View recently closed and unloaded tabs
+  - See when tabs were closed or unloaded
+  - Quick access to closed tab history
 
-## How it works
+## Usage
 
-- The extension tracks when each tab was last active
-- Every minute, it checks for tabs that have exceeded the inactive time limit
-- Tabs matching whitelist patterns are ignored
-- A tab becomes "active" when you switch to it or when its URL changes
+1. Click the extension icon to open the popup
+2. Configure your preferred settings:
+   - Set inactivity time limit
+   - Choose unload interval
+   - Enable/disable auto-kill for unloaded tabs
+   - Select default behavior
+3. Use the "Unload Inactive Tabs" button to manually unload tabs
+4. View your closed tab history in the popup
+5. Access advanced settings through the options page
+
+## Advanced Configuration
+
+### URL Patterns
+
+You can define custom rules for specific URLs using patterns:
+
+- `about:*` - Matches all about: pages
+- `*.example.com/*` - Matches all pages on example.com
+- `https://github.com/*` - Matches all GitHub pages
+
+### Behavior Modes
+
+1. **Duplicate (Ignore Query)**: Closes duplicate tabs, ignoring URL parameters
+2. **Exact Duplicate**: Only closes tabs with exactly the same URL
+3. **Same Domain**: Closes older tabs from the same domain
+4. **Always**: Closes any tab after the inactivity period
+5. **Never**: Disables automatic closing
+
+## Privacy
+
+This extension:
+- Only accesses tab information necessary for its functionality
+- Stores all data locally in your browser
+- Does not collect or transmit any user data
+- Requires minimal permissions to function
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
