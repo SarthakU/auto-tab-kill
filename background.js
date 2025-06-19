@@ -299,7 +299,7 @@ let unloadedTabs = new Map();
 // Function to check and kill old unloaded tabs
 async function checkAndKillUnloadedTabs() {
   console.log('Checking for old unloaded tabs...');
-  const settings = await browser.storage.local.get(['autoKillUnloaded']);
+  const settings = await browser.storage.sync.get({ autoKillUnloaded: false });
   
   if (!settings.autoKillUnloaded) {
     console.log('Auto-kill unloaded tabs is disabled');
@@ -324,41 +324,6 @@ async function checkAndKillUnloadedTabs() {
       unloadedTabs.delete(tabId);
     }
   }
-}
-
-// Update the checkUnloadTabs function to track unloaded tabs
-async function checkUnloadTabs() {
-  console.log('Starting unload tabs check...');
-  const settings = await browser.storage.local.get(['enabled', 'unloadTimeout']);
-  
-  if (!settings.enabled) {
-    console.log('Extension is disabled, skipping unload check');
-    return;
-  }
-
-  const now = Date.now();
-  const lastUnloadTime = await browser.storage.local.get('lastUnloadTime');
-  const unloadInterval = (settings.unloadTimeout || 30) * 60 * 1000; // Convert minutes to milliseconds
-
-  if (lastUnloadTime && now - lastUnloadTime < unloadInterval) {
-    console.log(`Unload interval not yet passed. Time left: ${Math.round((unloadInterval - (now - lastUnloadTime)) / 60000)} minutes`);
-    return;
-  }
-
-  const tabs = await browser.tabs.query({});
-  for (const tab of tabs) {
-    if (!tab.active && !tab.discarded) {
-      try {
-        await browser.tabs.discard(tab.id);
-        unloadedTabs.set(tab.id, now); // Track when the tab was unloaded
-        await addToHistory(tab.url, 'unloaded');
-      } catch (error) {
-        console.error(`Error unloading tab ${tab.id}:`, error);
-      }
-    }
-  }
-
-  await browser.storage.local.set({ lastUnloadTime: now });
 }
 
 // Add alarm for checking unloaded tabs
@@ -448,6 +413,11 @@ async function checkInactiveTabs() {
       console.log('Extension is disabled, skipping check');
       return;
     }
+
+    // Retrieve and integrate whitelist
+    const { whitelist = [] } = await browser.storage.sync.get({ whitelist: [] });
+    const transformedWhitelist = whitelist.map(pattern => ({ pattern, action: 'keep' }));
+    settings.patterns = transformedWhitelist.concat(settings.patterns || []);
 
     const tabs = await browser.tabs.query({});
     const now = Date.now();
