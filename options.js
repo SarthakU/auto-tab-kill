@@ -25,7 +25,7 @@ function saveOptions(e) {
 function restoreOptions() {
   console.log('Loading saved options...');
   browser.storage.sync.get({
-    timeLimit: 1,
+    timeLimit: 2, // Default to 2 minutes, consistent with config.json and background.js
     unloadTimeout: 30,
     whitelist: []
   }).then((result) => {
